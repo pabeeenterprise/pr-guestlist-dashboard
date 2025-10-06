@@ -1,30 +1,42 @@
 {
   "expo": {
-    "name": "pr-guestlist-dashboard",
+    "name": "PR Guestlist Dashboard",
     "slug": "pr-guestlist-dashboard",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
-    "newArchEnabled": true,
     "splash": {
-      "image": "./assets/splash-icon.png",
+      "image": "./assets/splash.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
+    "assetBundlePatterns": ["**/*"],
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.yourcompany.prguestlist"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "package": "com.yourcompany.prguestlist"
     },
     "web": {
-      "favicon": "./assets/favicon.png"
-    }
+      "bundler": "metro",
+      "favicon": "./assets/favicon.png",
+      "name": "PR Guestlist Dashboard",
+      "description": "Professional guestlist management for clubs",
+      "lang": "en",
+      "startUrl": "/",
+      "display": "standalone",
+      "themeColor": "#000000",
+      "backgroundColor": "#ffffff"
+    },
+    "scheme": "pr-guestlist",
+    "plugins": [
+      "expo-router"
+    ]
   }
 }
