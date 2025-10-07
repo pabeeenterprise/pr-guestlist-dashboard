@@ -36,7 +36,7 @@
     },
     "scheme": "pr-guestlist",
     "plugins": [
-      "expo-router"
+      
     ]
   }
 }

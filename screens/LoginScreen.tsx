@@ -64,6 +64,14 @@ export const LoginScreen: React.FC = () => {
           loading={loading}
           buttonStyle={styles.button}
         />
+
+        <Button
+          title="Register"
+          type="clear"
+          onPress={() => navigation.navigate('Register')}
+          titleStyle={{ color: theme.lightColors.primary }}
+/>
+
       </View>
     </KeyboardAvoidingView>
   );

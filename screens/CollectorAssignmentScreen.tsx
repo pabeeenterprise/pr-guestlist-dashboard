@@ -8,39 +8,75 @@ import {
   Share,
 } from 'react-native';
 import { Card, Button, CheckBox, SearchBar } from '@rneui/themed';
+import { RouteProp } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useAuth } from '../contexts/AuthContext';
-import { supabase, User, CollectorAssignment } from '../lib/supabase';
+import { DatabaseService } from '../services/databaseService';
+import { supabase } from '../lib/supabase';
 
-interface CollectorAssignmentScreenProps {
-  eventId: string;
+// Navigation types
+type RootStackParamList = {
+  CollectorAssignment: { eventId: string };
+};
+
+type CollectorAssignmentScreenRouteProp = RouteProp<RootStackParamList, 'CollectorAssignment'>;
+type CollectorAssignmentScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'CollectorAssignment'>;
+
+interface Props {
+  route: CollectorAssignmentScreenRouteProp;
+  navigation: CollectorAssignmentScreenNavigationProp;
 }
 
-export const CollectorAssignmentScreen: React.FC<CollectorAssignmentScreenProps> = ({
-  eventId,
-}) => {
+interface User {
+  user_id: string;
+  email: string;
+  role: string;
+  profile: {
+    full_name: string;
+    phone?: string;
+  };
+}
+
+interface Assignment {
+  assignment_id: string;
+  collector_id: string;
+  collector_name: string;
+  unique_token: string;
+  invitation_link: string;
+  is_active: boolean;
+}
+
+export const CollectorAssignmentScreen: React.FC<Props> = ({ route, navigation }) => {
+  // Get eventId from navigation parameters
+  const { eventId } = route.params;
+  
   const { user } = useAuth();
   const [collectors, setCollectors] = useState<User[]>([]);
-  const [assignments, setAssignments] = useState<CollectorAssignment[]>([]);
-  const [selectedCollectors, setSelectedCollectors] = useState<string[]>([]);
+  const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchCollectors();
     fetchExistingAssignments();
-  }, []);
+  }, [eventId]);
 
   const fetchCollectors = async () => {
     try {
+      // Fetch all users with collector role from NoSQL database
       const { data, error } = await supabase
-        .from('users')
-        .select('*')
-        .eq('role', 'collector')
-        .eq('is_active', true)
-        .order('full_name');
+        .from('users_doc')
+        .select('document')
+        .eq('document->>role', 'collector');
 
       if (error) throw error;
-      setCollectors(data || []);
+      
+      // Extract users from documents
+      const usersList = data?.map((item: { document: User }) => item.document).filter((doc: User) => 
+        doc.profile && doc.email
+      ) || [];
+      
+      setCollectors(usersList);
     } catch (error: any) {
       Alert.alert('Error', error.message);
     } finally {
@@ -50,19 +86,15 @@ export const CollectorAssignmentScreen: React.FC<CollectorAssignmentScreenProps>
 
   const fetchExistingAssignments = async () => {
     try {
-      const { data, error } = await supabase
-        .from('collector_assignments')
-        .select('*')
-        .eq('event_id', eventId)
-        .eq('pr_id', user?.id)
-        .eq('is_active', true);
-
-      if (error) throw error;
-      setAssignments(data || []);
+      // Get current event document
+      const eventDoc = await DatabaseService.getEvent(eventId);
       
-      // Set selected collectors based on existing assignments
-      const assignedCollectorIds = data?.map(a => a.collector_id) || [];
-      setSelectedCollectors(assignedCollectorIds);
+      if (eventDoc && eventDoc.collector_assignments) {
+        const activeAssignments = eventDoc.collector_assignments.filter(
+          (assignment: Assignment) => assignment.is_active
+        );
+        setAssignments(activeAssignments);
+      }
     } catch (error: any) {
       Alert.alert('Error', error.message);
     }
@@ -74,23 +106,14 @@ export const CollectorAssignmentScreen: React.FC<CollectorAssignmentScreenProps>
 
   const assignCollector = async (collectorId: string) => {
     try {
-      // Generate unique token
-      const token = Math.random().toString(36).substring(2, 15) + 
-                   Math.random().toString(36).substring(2, 15);
-      
-      const invitationLink = generateUniqueLink(collectorId, token);
+      const collector = collectors.find(c => c.user_id === collectorId);
+      if (!collector) return;
 
-      const { error } = await supabase
-        .from('collector_assignments')
-        .insert({
-          event_id: eventId,
-          pr_id: user?.id,
-          collector_id: collectorId,
-          unique_token: token,
-          invitation_link: invitationLink,
-        });
-
-      if (error) throw error;
+      // Use DatabaseService to assign collector
+      await DatabaseService.assignCollector(eventId, {
+        collector_id: collectorId,
+        collector_name: collector.profile.full_name
+      });
       
       fetchExistingAssignments();
       Alert.alert('Success', 'Collector assigned successfully!');
@@ -101,10 +124,27 @@ export const CollectorAssignmentScreen: React.FC<CollectorAssignmentScreenProps>
 
   const removeAssignment = async (assignmentId: string) => {
     try {
-      const { error } = await supabase
-        .from('collector_assignments')
-        .update({ is_active: false })
-        .eq('id', assignmentId);
+      // Get current event
+      const currentEvent = await DatabaseService.getEvent(eventId);
+      
+      // Update the assignment to inactive
+      const updatedAssignments = currentEvent.collector_assignments.map(
+        (assignment: Assignment) => 
+          assignment.assignment_id === assignmentId 
+            ? { ...assignment, is_active: false }
+            : assignment
+      );
+
+      // Update event document
+      const { data, error } = await supabase
+        .from('events_doc')
+        .update({
+          document: {
+            ...currentEvent,
+            collector_assignments: updatedAssignments
+          }
+        })
+        .eq('document->>event_id', eventId);
 
       if (error) throw error;
       
@@ -115,9 +155,9 @@ export const CollectorAssignmentScreen: React.FC<CollectorAssignmentScreenProps>
     }
   };
 
-  const shareInvitationLink = async (assignment: CollectorAssignment) => {
-    const collector = collectors.find(c => c.id === assignment.collector_id);
-    const message = `Hi ${collector?.full_name}! You've been assigned to collect guestlist entries. Use this link: ${assignment.invitation_link}`;
+  const shareInvitationLink = async (assignment: Assignment) => {
+    const collector = collectors.find(c => c.user_id === assignment.collector_id);
+    const message = `Hi ${collector?.profile.full_name}! You've been assigned to collect guestlist entries. Use this link: ${assignment.invitation_link}`;
     
     try {
       await Share.share({
@@ -133,34 +173,36 @@ export const CollectorAssignmentScreen: React.FC<CollectorAssignmentScreenProps>
     const existingAssignment = assignments.find(a => a.collector_id === collectorId);
     
     if (existingAssignment) {
-      // Remove assignment
-      removeAssignment(existingAssignment.id);
+      removeAssignment(existingAssignment.assignment_id);
     } else {
-      // Add assignment
       assignCollector(collectorId);
     }
   };
 
   const filteredCollectors = collectors.filter(collector =>
-    collector.full_name?.toLowerCase().includes(search.toLowerCase()) ||
+    collector.profile.full_name?.toLowerCase().includes(search.toLowerCase()) ||
     collector.email.toLowerCase().includes(search.toLowerCase())
   );
 
   const renderCollectorItem = ({ item }: { item: User }) => {
-    const isAssigned = assignments.some(a => a.collector_id === item.id);
-    const assignment = assignments.find(a => a.collector_id === item.id);
+    const isAssigned = assignments.some(a => a.collector_id === item.user_id);
+    const assignment = assignments.find(a => a.collector_id === item.user_id);
 
     return (
       <Card containerStyle={styles.collectorCard}>
         <View style={styles.collectorHeader}>
           <View style={styles.collectorInfo}>
-            <Text style={styles.collectorName}>{item.full_name || 'Unknown'}</Text>
+            <Text style={styles.collectorName}>
+              {item.profile.full_name || 'Unknown'}
+            </Text>
             <Text style={styles.collectorEmail}>{item.email}</Text>
-            {item.phone && <Text style={styles.collectorPhone}>{item.phone}</Text>}
+            {item.profile.phone && (
+              <Text style={styles.collectorPhone}>{item.profile.phone}</Text>
+            )}
           </View>
           <CheckBox
             checked={isAssigned}
-            onPress={() => toggleCollectorSelection(item.id)}
+            onPress={() => toggleCollectorSelection(item.user_id)}
             containerStyle={styles.checkbox}
           />
         </View>
@@ -173,7 +215,9 @@ export const CollectorAssignmentScreen: React.FC<CollectorAssignmentScreenProps>
               buttonStyle={styles.shareButton}
               onPress={() => shareInvitationLink(assignment)}
             />
-            <Text style={styles.tokenText}>Token: {assignment.unique_token.substring(0, 8)}...</Text>
+            <Text style={styles.tokenText}>
+              Token: {assignment.unique_token.substring(0, 8)}...
+            </Text>
           </View>
         )}
       </Card>
@@ -196,7 +240,7 @@ export const CollectorAssignmentScreen: React.FC<CollectorAssignmentScreenProps>
 
       <FlatList
         data={filteredCollectors}
-        keyExtractor={(item) => item.id}
+        keyExtractor={(item) => item.user_id}
         renderItem={renderCollectorItem}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.listContainer}
