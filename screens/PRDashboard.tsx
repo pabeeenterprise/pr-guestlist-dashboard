@@ -1,160 +1,85 @@
 import React, { useEffect, useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  Alert,
-} from 'react-native';
-import { Card, Button, FAB } from '@rneui/themed';
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, Alert } from 'react-native';
+import { Button } from '@rneui/themed';
 import { useAuth } from '../contexts/AuthContext';
-import { supabase, Event, GuestlistEntry } from '../lib/supabase';
-
-interface DashboardStats {
-  totalEvents: number;
-  activeGuests: number;
-  confirmedGuests: number;
-  pendingRSVPs: number;
-}
+import { supabase } from '../lib/supabase';
 
 export const PRDashboard: React.FC = () => {
-  const { user } = useAuth();
-  const [events, setEvents] = useState<Event[]>([]);
-  const [stats, setStats] = useState<DashboardStats>({
-    totalEvents: 0,
-    activeGuests: 0,
-    confirmedGuests: 0,
-    pendingRSVPs: 0,
-  });
-  const [loading, setLoading] = useState(true);
+  const { user, signOut } = useAuth();
+  const [events, setEvents] = useState<any[]>([]);
 
   useEffect(() => {
-    fetchDashboardData();
-  }, []);
+    if (user) loadEvents();
+  }, [user]);
 
-  const fetchDashboardData = async () => {
-    try {
-      // Fetch PR's events
-      const { data: eventsData, error: eventsError } = await supabase
-        .from('events')
-        .select('*')
-        .eq('created_by', user?.id)
-        .order('event_date', { ascending: false });
+  const loadEvents = async () => {
+    const { data, error } = await supabase
+      .from('events_doc')
+      .select('document')
+      .eq('document->>pr_id', user!.id);
+    if (!error) setEvents(data?.map((d: any) => d.document) || []);
+  };
 
-      if (eventsError) throw eventsError;
-      setEvents(eventsData || []);
-
-      // Calculate stats
-      if (eventsData && eventsData.length > 0) {
-        const eventIds = eventsData.map(e => e.id);
-        
-        const { data: guestlistData, error: guestlistError } = await supabase
-          .from('guestlist')
-          .select('rsvp_status, checked_in')
-          .in('event_id', eventIds);
-
-        if (guestlistError) throw guestlistError;
-
-        const totalGuests = guestlistData?.length || 0;
-        const confirmed = guestlistData?.filter(g => g.rsvp_status === 'confirmed').length || 0;
-        const pending = guestlistData?.filter(g => g.rsvp_status === 'pending').length || 0;
-
-        setStats({
-          totalEvents: eventsData.length,
-          activeGuests: totalGuests,
-          confirmedGuests: confirmed,
-          pendingRSVPs: pending,
-        });
-      }
-    } catch (error: any) {
+  const handleLogout = async () => {
+  try {
+    console.log('Attempting logout...');
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      console.error('Logout error:', error);
       Alert.alert('Error', error.message);
-    } finally {
-      setLoading(false);
+    } else {
+      console.log('Logout successful');
     }
-  };
+  } catch (err: any) {
+    console.error('Logout catch error:', err);
+    Alert.alert('Error', err.message);
+  }
+};
 
-  const createNewEvent = () => {
-    // Navigate to create event screen
-    console.log('Navigate to create event');
-  };
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      weekday: 'short',
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    });
-  };
 
   return (
     <View style={styles.container}>
-      <ScrollView showsVerticalScrollIndicator={false}>
-        {/* Header */}
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>Welcome back!</Text>
-          <Text style={styles.headerSubtitle}>Manage your events and guestlists</Text>
+      {/* Header with user info and logout */}
+      <View style={styles.header}>
+        <View>
+          <Text style={styles.welcomeText}>Welcome back!</Text>
+          <Text style={styles.emailText}>{user?.email}</Text>
         </View>
+        <Button
+  title="Logout"
+  type="outline"
+  onPress={handleLogout}
+/>
 
-        {/* Stats Cards */}
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.statsContainer}>
-          <Card containerStyle={[styles.statCard, { backgroundColor: '#007AFF' }]}>
-            <Text style={[styles.statNumber, { color: 'white' }]}>{stats.totalEvents}</Text>
-            <Text style={[styles.statLabel, { color: 'white' }]}>Total Events</Text>
-          </Card>
-          
-          <Card containerStyle={[styles.statCard, { backgroundColor: '#34C759' }]}>
-            <Text style={[styles.statNumber, { color: 'white' }]}>{stats.confirmedGuests}</Text>
-            <Text style={[styles.statLabel, { color: 'white' }]}>Confirmed</Text>
-          </Card>
-          
-          <Card containerStyle={[styles.statCard, { backgroundColor: '#FF9500' }]}>
-            <Text style={[styles.statNumber, { color: 'white' }]}>{stats.pendingRSVPs}</Text>
-            <Text style={[styles.statLabel, { color: 'white' }]}>Pending</Text>
-          </Card>
-          
-          <Card containerStyle={[styles.statCard, { backgroundColor: '#8E8E93' }]}>
-            <Text style={[styles.statNumber, { color: 'white' }]}>{stats.activeGuests}</Text>
-            <Text style={[styles.statLabel, { color: 'white' }]}>Total Guests</Text>
-          </Card>
-        </ScrollView>
+      </View>
 
-        {/* Recent Events */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Recent Events</Text>
-          {events.map((event) => (
-            <TouchableOpacity key={event.id} style={styles.eventCard}>
-              <View style={styles.eventHeader}>
-                <Text style={styles.eventName}>{event.name}</Text>
-                <Text style={styles.eventDate}>{formatDate(event.event_date)}</Text>
-              </View>
-              <Text style={styles.eventVenue}>{event.venue || 'No venue specified'}</Text>
-              <View style={styles.eventActions}>
-                <Button
-                  title="View Guestlist"
-                  size="sm"
-                  buttonStyle={styles.actionButton}
-                  titleStyle={styles.actionButtonText}
-                />
-                <Button
-                  title="Assign Collectors"
-                  size="sm"
-                  buttonStyle={[styles.actionButton, styles.secondaryButton]}
-                  titleStyle={[styles.actionButtonText, styles.secondaryButtonText]}
-                />
-              </View>
-            </TouchableOpacity>
-          ))}
-        </View>
-      </ScrollView>
-
-      {/* Floating Action Button */}
-      <FAB
-        placement="right"
-        icon={{ name: 'add', color: 'white' }}
-        color="#007AFF"
-        onPress={createNewEvent}
+      <Text style={styles.sectionHeader}>Your Events</Text>
+      
+      <TouchableOpacity 
+        onPress={() => {/* navigate to create event */}} 
+        style={styles.createButton}
+      >
+        <Text style={styles.createButtonText}>+ New Event</Text>
+      </TouchableOpacity>
+      
+      <FlatList
+        data={events}
+        keyExtractor={item => item.event_id}
+        renderItem={({ item }) => (
+          <View style={styles.eventCard}>
+            <Text style={styles.eventTitle}>{item.basic_info?.name || 'Untitled Event'}</Text>
+            <Text style={styles.eventDate}>
+              {item.basic_info?.date ? new Date(item.basic_info.date).toLocaleDateString() : 'No date'}
+            </Text>
+          </View>
+        )}
+        showsVerticalScrollIndicator={false}
+        ListEmptyComponent={() => (
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyText}>No events yet</Text>
+            <Text style={styles.emptySubtext}>Create your first event to get started</Text>
+          </View>
+        )}
       />
     </View>
   );
@@ -164,104 +89,85 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f5f5f5',
+    padding: 20,
   },
   header: {
-    padding: 20,
-    backgroundColor: 'white',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+    paddingVertical: 10,
   },
-  headerTitle: {
+  welcomeText: {
     fontSize: 24,
     fontWeight: 'bold',
     color: '#333',
   },
-  headerSubtitle: {
-    fontSize: 16,
-    color: '#666',
-    marginTop: 5,
-  },
-  statsContainer: {
-    paddingVertical: 20,
-    paddingHorizontal: 10,
-  },
-  statCard: {
-    width: 120,
-    height: 100,
-    marginHorizontal: 5,
-    borderRadius: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  statNumber: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    textAlign: 'center',
-  },
-  statLabel: {
+  emailText: {
     fontSize: 14,
-    textAlign: 'center',
-    marginTop: 5,
+    color: '#666',
+    marginTop: 2,
   },
-  section: {
-    padding: 20,
+  logoutButton: {
+    borderColor: '#FF3B30',
+    borderWidth: 1,
+    paddingHorizontal: 20,
   },
-  sectionTitle: {
+  logoutButtonText: {
+    color: '#FF3B30',
+    fontSize: 14,
+  },
+  sectionHeader: {
     fontSize: 20,
     fontWeight: 'bold',
     marginBottom: 15,
     color: '#333',
   },
-  eventCard: {
-    backgroundColor: 'white',
+  createButton: {
+    backgroundColor: '#007AFF',
     padding: 15,
-    borderRadius: 10,
-    marginBottom: 15,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3.84,
-    elevation: 5,
+    borderRadius: 8,
+    marginBottom: 20,
   },
-  eventHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+  createButtonText: {
+    color: '#fff',
+    textAlign: 'center',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  eventCard: {
+    backgroundColor: '#fff',
+    padding: 15,
     marginBottom: 10,
+    borderRadius: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
   },
-  eventName: {
+  eventTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    flex: 1,
     color: '#333',
   },
   eventDate: {
     fontSize: 14,
     color: '#666',
+    marginTop: 5,
   },
-  eventVenue: {
-    fontSize: 14,
+  emptyState: {
+    alignItems: 'center',
+    paddingVertical: 40,
+  },
+  emptyText: {
+    fontSize: 18,
+    fontWeight: 'bold',
     color: '#666',
-    marginBottom: 15,
   },
-  eventActions: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  actionButton: {
-    backgroundColor: '#007AFF',
-    paddingHorizontal: 20,
-    height: 35,
-  },
-  actionButtonText: {
-    fontSize: 12,
-  },
-  secondaryButton: {
-    backgroundColor: 'transparent',
-    borderWidth: 1,
-    borderColor: '#007AFF',
-  },
-  secondaryButtonText: {
-    color: '#007AFF',
+  emptySubtext: {
+    fontSize: 14,
+    color: '#999',
+    marginTop: 5,
   },
 });

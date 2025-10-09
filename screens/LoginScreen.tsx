@@ -1,114 +1,37 @@
 import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  Alert,
-  KeyboardAvoidingView,
-  Platform,
-} from 'react-native';
-import { Input, Button } from '@rneui/themed';
+import { View, Alert, StyleSheet } from 'react-native';
+import { Input, Button, Text } from '@rneui/themed';
+import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { RootStackParamList } from '../navigation/types';
 import { useAuth } from '../contexts/AuthContext';
 
-export const LoginScreen: React.FC = () => {
+type Props = NativeStackScreenProps<RootStackParamList, 'Login'>;
+
+export const LoginScreen: React.FC<Props> = ({ navigation }) => {
+  const { signIn } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
-  const { signIn } = useAuth();
 
   const handleLogin = async () => {
-    if (!email || !password) {
-      Alert.alert('Error', 'Please fill in all fields');
-      return;
-    }
-
     try {
-      setLoading(true);
       await signIn(email, password);
-    } catch (error: any) {
-      Alert.alert('Error', error.message);
-    } finally {
-      setLoading(false);
+    } catch (err: any) {
+      Alert.alert('Error', err.message);
     }
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
-      <View style={styles.form}>
-        <Text style={styles.title}>PR Guestlist Dashboard</Text>
-        <Text style={styles.subtitle}>Sign in to manage your events</Text>
-
-        <Input
-          placeholder="Email"
-          value={email}
-          onChangeText={setEmail}
-          autoCapitalize="none"
-          keyboardType="email-address"
-          leftIcon={{ type: 'material', name: 'email' }}
-        />
-
-        <Input
-          placeholder="Password"
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry
-          leftIcon={{ type: 'material', name: 'lock' }}
-        />
-
-        <Button
-          title="Sign In"
-          onPress={handleLogin}
-          loading={loading}
-          buttonStyle={styles.button}
-        />
-
-        <Button
-          title="Register"
-          type="clear"
-          onPress={() => navigation.navigate('Register')}
-          titleStyle={{ color: theme.lightColors.primary }}
-/>
-
-      </View>
-    </KeyboardAvoidingView>
+    <View style={styles.container}>
+      <Text h3 style={styles.title}>PR Guestlist Dashboard</Text>
+      <Input placeholder="Email" leftIcon={{ name: 'email' }} onChangeText={setEmail} value={email} autoCapitalize="none" />
+      <Input placeholder="Password" leftIcon={{ name: 'lock' }} onChangeText={setPassword} value={password} secureTextEntry />
+      <Button title="Sign In" onPress={handleLogin} />
+      <Button type="clear" title="Register" onPress={() => navigation.navigate('Register')} titleStyle={{ color: '#007AFF' }} />
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    padding: 20,
-    backgroundColor: '#f5f5f5',
-  },
-  form: {
-    backgroundColor: 'white',
-    padding: 20,
-    borderRadius: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    textAlign: 'center',
-    marginBottom: 10,
-    color: '#333',
-  },
-  subtitle: {
-    fontSize: 16,
-    textAlign: 'center',
-    marginBottom: 30,
-    color: '#666',
-  },
-  button: {
-    marginTop: 20,
-    backgroundColor: '#007AFF',
-  },
+  container: { flex:1, justifyContent:'center', padding:20 },
+  title: { textAlign:'center', marginBottom:20 }
 });

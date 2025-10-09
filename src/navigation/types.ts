@@ -1,9 +1,4 @@
-// src/navigation/types.ts
-
-/**  
- * RootStackParamList maps each screen name  
- * to its route parameters.  
- */
+// Defines all route names and their params
 export type RootStackParamList = {
   Login: undefined;
   Register: undefined;
@@ -11,4 +6,3 @@ export type RootStackParamList = {
   CollectorAssignment: { eventId: string };
   GuestlistCollection: { collectorToken: string };
 };
-
