@@ -50,7 +50,7 @@ export const PRDashboard: React.FC = () => {
   type="outline"
   onPress={handleLogout}
 />
-
+        
       </View>
 
       <Text style={styles.sectionHeader}>Your Events</Text>

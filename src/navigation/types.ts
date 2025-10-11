@@ -5,4 +5,6 @@ export type RootStackParamList = {
   Main: undefined;
   CollectorAssignment: { eventId: string };
   GuestlistCollection: { collectorToken: string };
+  ForgotPassword: undefined;
+  ResetPassword: undefined;
 };

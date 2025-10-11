@@ -14,7 +14,9 @@ import { CollectorAssignmentScreen } from './screens/CollectorAssignmentScreen';
 import { GuestlistCollectionScreen } from './screens/GuestlistCollectionScreen';
 import { TemplateManagerScreen } from './screens/TemplateManagerScreen';
 import { EventsScreen, ProfileScreen, LoadingScreen, Icon } from './screens/Placeholders';
-import { RootStackParamList } from './navigation/types';
+import { RootStackParamList } from './src/navigation/types';
+import { ForgotPasswordScreen } from './screens/ForgotPasswordScreen';
+import { ResetPasswordScreen } from './screens/ResetPasswordScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -40,9 +42,11 @@ function AppNavigator() {
           <>
             <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: true, title: 'Sign In' }}/>
             <Stack.Screen name="Register" component={RegisterScreen} options={{ headerShown: true, title: 'Register' }}/>
+            <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} options={{ headerShown: true, title: 'Reset Password' }}/>
+            <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} />
           </>
         ) : (
-          <Stack.Screen name="Main" component={AuthenticatedTabs}/>
+          <Stack.Screen name="Main" component={AuthenticatedTabs}/> 
         )}
         <Stack.Screen name="CollectorAssignment" component={CollectorAssignmentScreen} options={{ headerShown: true, title: 'Assign Collectors' }}/>
         <Stack.Screen name="GuestlistCollection" component={GuestlistCollectionScreen} options={{ headerShown: true, title: 'Collect Guestlist' }}/>
