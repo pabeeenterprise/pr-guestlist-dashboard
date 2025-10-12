@@ -20,6 +20,27 @@ import { ResetPasswordScreen } from './screens/ResetPasswordScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator<RootStackParamList>();
+const linking = {
+  prefixes: ['myapp://', 'https://jbmfzdhbdsxgrtuwnbuu.supabase.co', 'http://localhost:3000'],
+  config: {
+    screens: {
+      ResetPassword: 'reset-password',
+      Login: 'login',
+      Register: 'register',
+      ForgotPassword: 'forgot-password',
+      Main: {
+        screens: {
+          Dashboard: 'dashboard',
+          Events: 'events',
+          Templates: 'templates',
+          Profile: 'profile',
+        },
+      },
+      CollectorAssignment: 'assign-collectors',
+      GuestlistCollection: 'collect-guestlist',
+    },
+  },
+};
 
 function AuthenticatedTabs() {
   return (

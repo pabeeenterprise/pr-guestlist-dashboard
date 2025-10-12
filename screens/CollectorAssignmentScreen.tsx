@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import { Card, Button, CheckBox, SearchBar } from '@rneui/themed';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { RootStackParamList } from '../navigation/types';
+import { RootStackParamList } from '../src/navigation/types';
 import { useAuth } from '../contexts/AuthContext';
 import { DatabaseService } from '../services/databaseService';
 

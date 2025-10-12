@@ -8,7 +8,7 @@ import {
   Alert,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { RootStackParamList } from '../navigation/types';
+import { RootStackParamList } from '../src/navigation/types';
 import { DatabaseService } from '../services/databaseService';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'GuestlistCollection'>;

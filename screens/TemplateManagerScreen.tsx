@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { Card, Button, Input, ButtonGroup } from '@rneui/themed';
 import { useForm, Controller } from 'react-hook-form';
-import { supabase } from '../lib/supabase';
+import { supabase } from '../src/lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 
 interface Template {

@@ -5,7 +5,9 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../src/navigation/types';
 import { useAuth } from '../contexts/AuthContext';
 
+
 type Props = NativeStackScreenProps<RootStackParamList, 'ForgotPassword'>;
+
 
 export const ForgotPasswordScreen: React.FC<Props> = ({ navigation }) => {
   const { resetPassword } = useAuth();

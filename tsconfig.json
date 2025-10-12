@@ -1,6 +1,15 @@
 {
   "extends": "expo/tsconfig.base",
   "compilerOptions": {
-    "strict": true
-  }
+    "strict": true,
+    "skipLibCheck": true
+  },
+  "include": [
+    "src",         // if you have other code under src/
+    "lib/**/*",    // include your supabase client
+    "screens/**/*",// include all screen components
+    "contexts/**/*",
+    "hooks/**/*",
+    "pages/**/*"
+  ]
 }

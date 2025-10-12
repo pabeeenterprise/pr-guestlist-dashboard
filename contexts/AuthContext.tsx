@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { Platform } from 'react-native';
-import { supabase } from '../lib/supabase';
+import { supabase } from '../src/lib/supabase';
 import type { Session, User } from '@supabase/supabase-js';
 
 type AuthContextType = {
@@ -90,7 +90,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
    const resetPassword = async (email: string) => {
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: Platform.select({
-        web: 'http://localhost:8081/reset-password',
+        web: 'http://localhost:3000/reset-password',
         default: 'myapp://reset-password' // for mobile deep linking
       })
     });

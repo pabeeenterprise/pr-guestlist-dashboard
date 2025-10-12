@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Alert, StyleSheet } from 'react-native';
 import { Input, Button, Text } from '@rneui/themed';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { RootStackParamList } from '../navigation/types';
+import { RootStackParamList } from '../src/navigation/types';
 import { useAuth } from '../contexts/AuthContext';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Register'>;

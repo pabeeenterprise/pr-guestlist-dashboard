@@ -1,26 +1,44 @@
 import React, { useState, useEffect } from 'react';
 import { View, Alert } from 'react-native';
 import { Input, Button, Text } from '@rneui/themed';
-import { supabase } from '../lib/supabase';
-import { useAuth } from '../contexts/AuthContext';
+import { supabase } from '../src/lib/supabase';
+import * as Linking from 'expo-linking';
 
 export const ResetPasswordScreen = () => {
-  const { user } = useAuth(); // Get the current user session
   const [newPassword, setNewPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   useEffect(() => {
-    // Listen for PASSWORD_RECOVERY event
-    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'PASSWORD_RECOVERY') {
-        // User is now authenticated and can reset password
-        console.log('Password recovery mode activated');
-      }
-    });
+    const handleDeepLink = async () => {
+      // Get the initial URL that opened the app
+      const url = await Linking.getInitialURL();
+      
+      if (url) {
+        const parsed = Linking.parse(url);
+        const accessToken = parsed.queryParams?.access_token;
+        const refreshToken = parsed.queryParams?.refresh_token;
 
-    return () => {
-      authListener?.subscription?.unsubscribe();
+        if (accessToken && refreshToken) {
+          try {
+            // Authenticate user with tokens from the deep link
+            const { error } = await supabase.auth.setSession({
+              access_token: accessToken as string,
+              refresh_token: refreshToken as string,
+            });
+
+            if (error) throw error;
+            setIsAuthenticated(true);
+          } catch (error: any) {
+            Alert.alert('Error', `Authentication failed: ${error.message}`);
+          }
+        } else {
+          Alert.alert('Error', 'Invalid reset link');
+        }
+      }
     };
+
+    handleDeepLink();
   }, []);
 
   const handleResetPassword = async () => {
@@ -29,28 +47,35 @@ export const ResetPasswordScreen = () => {
       return;
     }
 
-    if (!user) {
-      Alert.alert('Error', 'No authenticated user found');
+    if (!isAuthenticated) {
+      Alert.alert('Error', 'User not authenticated for password reset');
       return;
     }
 
     setLoading(true);
     try {
-      // Simply update the password - no need for verifyOtp
       const { error } = await supabase.auth.updateUser({ 
         password: newPassword 
       });
       
       if (error) throw error;
-
       Alert.alert('Success', 'Password updated successfully!');
-      // Navigate to login or main screen
     } catch (error: any) {
       Alert.alert('Error', error.message);
     } finally {
       setLoading(false);
     }
   };
+
+  if (!isAuthenticated) {
+    return (
+      <View style={{ flex: 1, padding: 20, justifyContent: 'center' }}>
+        <Text h4 style={{ textAlign: 'center' }}>
+          Authenticating...
+        </Text>
+      </View>
+    );
+  }
 
   return (
     <View style={{ flex: 1, padding: 20, justifyContent: 'center' }}>
